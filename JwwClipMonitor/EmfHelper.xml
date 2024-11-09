@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>EmfHelper</name>
+    </assembly>
+    <members>
+        <member name="F:EmfHelper.PenStyle.PS_COSMETIC">
+            <summary>
+            A pen type that specifies a line with a width of one logical unit and a style that is a solid color.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_GEOMETRIC">
+            <summary>
+            A pen type that specifies a line with a width that is measured in logical units and a style that can contain any of the attributes of a brush.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_ENDCAP_ROUND">
+            <summary>
+            A line cap that specifies round ends.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_ENDCAP_SQUARE">
+            <summary>
+            A line cap that specifies square ends.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_ENDCAP_FLAT">
+            <summary>
+            A line cap that specifies flat ends.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_JOIN_ROUND">
+            <summary>
+            A line join that specifies round joins.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_JOIN_BEVEL">
+            <summary>
+            A line join that specifies beveled joins.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_JOIN_MITER">
+            <summary>
+            A line join that specifies mitered joins when the lengths of the joins are within the current miter length limit.
+            If the lengths of the joins exceed the miter limit, beveled joins are specified.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_SOLID">
+            <summary>
+            A line style that is a solid color.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_DASH">
+            <summary>
+            A line style that is dashed.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_DOT">
+            <summary>
+            A line style that is dotted.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_DASHDOT">
+            <summary>
+            A line style that consists of alternating dashes and dots.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_DASHDOTDOT">
+            <summary>
+            A line style that consists of dashes and double dots.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_NULL">
+            <summary>
+            A line style that is invisible.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_INSIDEFRAME">
+            <summary>
+            A line style that is a solid color. When this style is specified in a drawing record that takes a bounding rectangle,
+            the dimensions of the figure are shrunk so that it fits entirely in the bounding rectangle, considering the width of the pen.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_USERSTYLE">
+            <summary>
+            A line style that is defined by a styling array, which specifies the lengths of dashes and gaps in the line.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.PenStyle.PS_ALTERNATE">
+            <summary>
+            A line style in which every other pixel is set. This style is applicable only to a pen type of PS_COSMETIC.
+            </summary>
+        </member>
+        <member name="F:EmfHelper.EmfParser.mListener">
+            <summary>
+            Provide the possibility to suppress individual records.
+            </summary>
+        </member>
+        <member name="M:EmfHelper.EmfUtility.CharsToString(System.Char[])">
+            <summary>
+            charガタの配列を文字列にする。
+            new string(chars)の場合、charsに\0が含まれていた場合問題がある。
+            char配列中に\0があればそれ以降を無視する。
+            </summary>
+        </member>
+        <member name="M:EmfHelper.EmfUtility.PointRListToPointLList(System.Byte[],System.Int32)">
+            <summary>
+            圧縮された相対座標（PointR）の配列をを復元する。
+            情報がないのでこれは暫定実装。この形式の座標列を見たことがないのでわからない。
+            データを作っても上手く表示されないのでこの実装は間違っている。
+            </summary>
+        </member>
+    </members>
+</doc>

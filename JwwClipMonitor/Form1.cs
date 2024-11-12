@@ -1,47 +1,54 @@
 using JwwClipMonitor.Emf;
+using JwwClipMonitor.Jww;
 using JwwClipMonitor.Properties;
 using JwwClipMonitor.Utility;
 using JwwHelper;
 using System.ComponentModel;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using static System.Math;
 
 namespace JwwClipMonitor
 {
     public partial class Form1 : Form
     {
-        public class ClipboardFormat
-        {
-            public string FormatName;
-            public int Formatid;
-
-            public ClipboardFormat(string formatName, int formatid)
-            {
-                FormatName = formatName;
-                Formatid = formatid;
-            }
-
-            public override string ToString() => FormatName;
-        }
         private List<ClipboardFormat> mPasteSupportFormatList = new List<ClipboardFormat>();
         public BindingList<ClipboardFormat> PasteFormatList { get; } = new();
-
-        private int PngId = -1;
         private IntPtr mLastImageHandle = IntPtr.Zero;
 
         public Form1()
         {
             InitializeComponent();
             this.Text = Resources.Title_App;
-            PngId = ClipboardUtility.RegisterClipboardFormat("PNG");
             mPasteSupportFormatList.Add(new("DIB", ClipboardUtility.CF_DIB));
             mPasteSupportFormatList.Add(new("Bitmap", ClipboardUtility.CF_BITMAP));
-            mPasteSupportFormatList.Add(new("PNG", PngId));
+            mPasteSupportFormatList.Add(new("PNG", ClipboardImageToJww.PngId));
             mPasteSupportFormatList.Add(new("Enhanced Meta File", ClipboardUtility.CF_ENHMETAFILE));
             listPaste.DataSource = PasteFormatList;
+            cmbScale.DataSource = Scales;
+            cmbScale.ValueMember = "Scale";
+            cmbScale.DisplayMember = "Name";
+            cmbScale.SelectedValue = 1.0;
         }
+
+        internal static readonly PaperScale[] Scales = new PaperScale[] {
+            new PaperScale("5:1", 5.0),
+            new PaperScale("2:1", 2.0),
+            new PaperScale("1:1", 1.0),
+            new PaperScale("1:2", 0.5),
+            new PaperScale("1:5", 0.2),
+            new PaperScale("1:10", 0.1),
+            new PaperScale("1:20", 0.05),
+            new PaperScale("1:50", 0.02),
+            new PaperScale("1:100", 0.01),
+            new PaperScale("1:200", 0.005),
+            new PaperScale("1:500", 0.002),
+            new PaperScale("1:1000", 0.001),
+        };
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -57,13 +64,72 @@ namespace JwwClipMonitor
             timer1.Start();
         }
 
+        private void btnToJww_Click(object sender, EventArgs e)
+        {
+            var s = listPaste.SelectedItem;
+            if (s is not ClipboardFormat cf) return;
+            var scale = (cmbScale.SelectedItem as PaperScale)?.Scale ?? 1.0;
+            ClipboardImageToJww.ConvertToJww(this.Handle, cf.FormatId, scale);
+        }
+
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            var item = listPaste.SelectedItem as ClipboardFormat;
+            if (item == null) return;
+            Save(item);
+        }
+
+
+        private void Save(ClipboardFormat item)
+        {
+            var d = new SaveFileDialog();
+            d.FileName = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            if (item.FormatId == ClipboardUtility.CF_BITMAP ||
+                item.FormatId == ClipboardUtility.CF_DIB ||
+                item.FormatId == ClipboardImageToJww.PngId)
+            {
+                d.Filter = "Bitmap file (*.bmp)|*.bmp|PNG file (*.png)|*.png";
+                d.FilterIndex = 1;
+                if (d.ShowDialog(this) == DialogResult.OK)
+                {
+                    using var image = ClipboardImageToJww.GetBitmapImageFromClipboard(item.FormatId);
+                    if (image != null)
+                    {
+                        if (d.FilterIndex == 1)
+                        {
+                            image.Save(d.FileName, ImageFormat.Bmp);
+                            return;
+                        }
+                        if (d.FilterIndex == 2)
+                        {
+                            image.Save(d.FileName, ImageFormat.Png);
+                            return;
+                        }
+                    }
+                }
+                return;
+            }
+            if (item.FormatId == ClipboardUtility.CF_ENHMETAFILE)
+            {
+                d.Filter = "Enhanced Meta File (*.emf)|*.emf";
+                d.FilterIndex = 1;
+                if (d.ShowDialog(this) == DialogResult.OK)
+                {
+                    using var ms = ClipboardImageToJww.GetEmfFromClipboard(Handle);
+                    if (ms == null) return;
+                    File.WriteAllBytes(d.FileName, ms.ToArray());
+                }
+                return;
+            }
+
+        }
+
         private bool UpdatePasteFormatList()
         {
             var list = new List<ClipboardFormat>();
-            var old = listPaste.SelectedItem as ClipboardFormat;
             foreach (var s in mPasteSupportFormatList)
             {
-                if (ClipboardUtility.IsClipboardFormatAvailable(s.Formatid)) list.Add(s);
+                if (ClipboardUtility.IsClipboardFormatAvailable(s.FormatId)) list.Add(s);
             }
             var changed = false;
             for (var i = PasteFormatList.Count - 1; i >= 0; i--)
@@ -87,6 +153,44 @@ namespace JwwClipMonitor
 
         private void UpdatePreview()
         {
+            switch (tabControl1.SelectedIndex)
+            {
+                case 0: 
+                    PreviewImage();
+                    break;
+                case 1:
+                    PreviewJww();
+                    break;
+            }
+        }
+
+        private void PreviewJww()
+        {
+            using var data = Clipboard.GetData("Jw_win") as MemoryStream;
+            if (data == null)
+            {
+                pictureBox1.Image?.Dispose();
+                pictureBox1.Image = null;
+                return;
+            }
+
+            var jwr = new Jww.JwwReader();
+            jwr.Read(data);
+            pictureBox1.Image?.Dispose();
+            pictureBox1.Image = null;
+            var doc = jwr.Document;
+            if (doc.Bounds.IsNull()) return;
+            var drawer = new JwwDrawer();
+            var w = (int)Ceiling(doc.Bounds.Width() * 96 / 2.54 + 0.5);
+            var h = (int)Ceiling(doc.Bounds.Height() * 96 / 2.54 + 0.5);
+            var bmp = new Bitmap(w, h);
+            using var g = Graphics.FromImage(bmp);
+            drawer.Scale = 96 / 2.54f;
+            drawer.OnDraw(g, jwr.Document);
+            pictureBox1.Image = bmp;
+        }
+
+        private void PreviewImage() { 
             if (listPaste.Items.Count == 0)
             {
                 if (mLastImageHandle != IntPtr.Zero) pictureBox1.Image = null;
@@ -94,15 +198,12 @@ namespace JwwClipMonitor
             }
             var item = listPaste.SelectedItem as ClipboardFormat;
             if (item == null) return;
-            var imageChanged = false;
             if (ClipboardUtility.OpenClipboard(Handle))
             {
-                imageChanged = ClipboardUtility.GetClipboardData(item.Formatid) != mLastImageHandle;
-                mLastImageHandle = ClipboardUtility.GetClipboardData(item.Formatid);
+                mLastImageHandle = ClipboardUtility.GetClipboardData(item.FormatId);
             }
             ClipboardUtility.CloseClipboard();
-            if (!imageChanged) return;
-            if (item.Formatid == ClipboardUtility.CF_ENHMETAFILE)
+            if (item.FormatId == ClipboardUtility.CF_ENHMETAFILE)
             {
                 if (ClipboardUtility.OpenClipboard(Handle))
                 {
@@ -118,224 +219,14 @@ namespace JwwClipMonitor
             else
             {
                 pictureBox1.Image?.Dispose();
-                pictureBox1.Image = GetBitmapImage(item.Formatid);
+                pictureBox1.Image = ClipboardImageToJww.GetBitmapImageFromClipboard(item.FormatId);
             }
-        }
-
-        private void btnToJww_Click(object sender, EventArgs e)
-        {
-            var s = listPaste.SelectedItem;
-            if (s is not ClipboardFormat cf) return;
-            ConvertToJww(cf.Formatid);
-        }
-
-        private void btnSave_Click(object sender, EventArgs e)
-        {
-            var item = listPaste.SelectedItem as ClipboardFormat;
-            if (item == null) return;
-            var d = new SaveFileDialog();
-            d.FileName = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            if (item.Formatid == ClipboardUtility.CF_BITMAP || item.Formatid == ClipboardUtility.CF_DIB || item.Formatid == PngId)
-            {
-                d.Filter = "Bitmap file (*.bmp)|*.bmp|PNG file (*.png)|*.png";
-                d.FilterIndex = 1;
-                if (d.ShowDialog(this) == DialogResult.OK)
-                {
-                    using var image = GetBitmapImage(item.Formatid);
-                    if(image != null){
-                        if (d.FilterIndex == 1)
-                        {
-                            image.Save(d.FileName, ImageFormat.Bmp);
-                            return;
-                        }
-                        if (d.FilterIndex == 2)
-                        {
-                            image.Save(d.FileName, ImageFormat.Png);
-                            return;
-                        }
-                    }
-                }
-                return;
-            }
-            if(item.Formatid == ClipboardUtility.CF_ENHMETAFILE)
-            {
-                d.Filter = "Enhanced Meta File (*.emf)|*.emf";
-                d.FilterIndex = 1;
-                if (d.ShowDialog(this) == DialogResult.OK)
-                {
-                    using var ms = GetEmfFromClipboard();
-                    if (ms == null) return;
-                    File.WriteAllBytes(d.FileName, ms.ToArray());
-                }
-                return;
-            }
-        }
-
-        private void listPaste_SelectedIndexChanged(object sender, EventArgs e)
-        {
         }
 
         private void ChangeButtonState()
         {
             btnToJww.Enabled = listPaste.SelectedIndex >= 0;
             btnSave.Enabled = listPaste.SelectedIndex >= 0;
-        }
-
-        private Image? GetBitmapImage(int formatId)
-        {
-            if (formatId == PngId) return GetPngFromClipboard();
-            if (formatId == ClipboardUtility.CF_BITMAP) return GetBitmapFromClipboard();
-            if (formatId == ClipboardUtility.CF_DIB) return GetDibFromClipboard();
-            return null;
-        }
-
-        private void ConvertToJww(int formatId)
-        {
-            if (formatId == ClipboardUtility.CF_ENHMETAFILE)
-            {
-                using var ms = GetEmfFromClipboard();
-                if (ms != null) EmfToJww(ms);
-                return;
-            }
-            using var image = GetBitmapImage(formatId);
-            if (image != null) ImageToJww(image);
-            return;
-        }
-
-        private Image? GetPngFromClipboard()
-        {
-            var d = System.Windows.Forms.Clipboard.GetData("PNG");
-            if (d is not MemoryStream ms) return null;
-            using var image = Bitmap.FromStream(ms);
-            ms.Dispose();
-            return To24bitBitmap(image);
-        }
-
-        private Image? GetBitmapFromClipboard()
-        {
-            using var bmp = Clipboard.GetData(DataFormats.Bitmap) as Bitmap;
-            return To24bitBitmap(bmp);
-        }
-
-        private Image? GetDibFromClipboard()
-        {
-            var d = Clipboard.GetData(DataFormats.Dib);
-            var ds = d as MemoryStream;
-            var dib = ds?.ToArray();
-            ds?.Dispose();
-            if (dib == null) return null;
-            using var ms = new MemoryStream();
-            ms.WriteByte(0x42);
-            ms.WriteByte(0x4D);
-            var fileSize = 14 + dib.Length;
-            ms.WriteByte((byte)(fileSize & 0xff));
-            ms.WriteByte((byte)((fileSize >> 8) & 0xff));
-            ms.WriteByte((byte)((fileSize >> 16) & 0xff));
-            ms.WriteByte((byte)((fileSize >> 24) & 0xff));
-            ms.WriteByte(0);
-            ms.WriteByte(0);
-            ms.WriteByte(0);
-            ms.WriteByte(0);
-            var offset = 14 + dib[0] + (dib[1] << 8) + (dib[2] << 16) + (dib[3] << 24);
-            ms.WriteByte((byte)(offset & 0xff));
-            ms.WriteByte((byte)((offset >> 8) & 0xff));
-            ms.WriteByte((byte)((offset >> 16) & 0xff));
-            ms.WriteByte((byte)((offset >> 24) & 0xff));
-            ms.Write(dib);
-            ms.Position = 0;
-            using var bmp = Bitmap.FromStream(ms);
-            return To24bitBitmap(bmp);
-        }
-
-        private Bitmap? To24bitBitmap(Image? bmp)
-        {
-            if (bmp == null) return null;
-            // 24ビットに変換
-            var image = new Bitmap(bmp.Width, bmp.Height, PixelFormat.Format24bppRgb);
-            using var g = Graphics.FromImage(image);
-            g.Clear(Color.White);
-            g.DrawImage(bmp, 0, 0);
-            return image;
-        }
-
-        private MemoryStream? GetEmfFromClipboard()
-        {
-            if (ClipboardUtility.OpenClipboard(Handle))
-            {
-                try
-                {
-                    var h = ClipboardUtility.GetClipboardData(ClipboardUtility.CF_ENHMETAFILE);
-                    if (h != IntPtr.Zero)
-                    {
-                        uint bufferSize = ClipboardUtility.GetEnhMetaFileBits(h, 0, null);
-                        var dataArray = new byte[bufferSize];
-                        ClipboardUtility.GetEnhMetaFileBits(h, bufferSize, dataArray);
-                        return new MemoryStream(dataArray);
-                    }
-                }
-                finally
-                {
-                    ClipboardUtility.CloseClipboard();
-                }
-            }
-            return null;
-        }
-
-        private void ImageToJww(Image originalImage)
-        {
-            var pictFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-            if (pictFolder == null) return;
-            var folder = pictFolder + "\\JwwClipMonitor";
-            if (!Directory.Exists(folder))
-            {
-                Directory.CreateDirectory(folder);
-            }
-            var dt = DateTime.Now.ToString("yyyyMMdd_HHmmss_FFFFFFF") + ".bmp";
-            var tfn = Path.Combine(folder, dt);
-
-            // 32ビットビットマップだとjw_cadの背景色透過が働かないので24ビットに変換
-            using var image = new Bitmap(originalImage.Width, originalImage.Height, PixelFormat.Format24bppRgb);
-            using var g = Graphics.FromImage(image);
-            g.DrawImage(originalImage, 0, 0);
-
-            var width = image.Width * 24.4 / image.HorizontalResolution;
-            var height = image.Height * 25.4 / image.VerticalResolution;
-            image.Save(tfn, ImageFormat.Bmp);
-            var name = $"^@BM{tfn},{width},{height},0,0,1,0";
-            var moji = new JwwMoji();
-            moji.m_string = name;
-            moji.m_dSizeX = 2;
-            moji.m_dSizeY = 2;
-            moji.m_start_x = 0;
-            moji.m_start_y = 0;
-            moji.m_end_x = name.Length * moji.m_dSizeX;
-            moji.m_end_y = 0;
-            moji.m_strFontName = "ＭＳ ゴシック";//決め打ち
-            var cw = new JwwClipWriter();
-            cw.AddData(moji);
-            //            cw.Write();
-            IntPtr h = cw.Write();
-            if (h == IntPtr.Zero) return;
-            ClipboardUtility.OpenClipboard(this.Handle);
-            ClipboardUtility.EmptyClipboard();
-            var id = ClipboardUtility.RegisterClipboardFormat("Jw_win");
-            if (id != 0) ClipboardUtility.SetClipboardData(id, h);
-            ClipboardUtility.CloseClipboard();
-        }
-
-        void EmfToJww(MemoryStream ms)
-        {
-            var r = new EmfReader();
-            r.Read(ms);
-            var cw = new JwwClipWriter();
-            foreach (var d in r.Shapes) cw.AddData(d);
-            IntPtr h = cw.Write();
-            if (h == IntPtr.Zero) return;
-            ClipboardUtility.OpenClipboard(this.Handle);
-            ClipboardUtility.EmptyClipboard();
-            var id = ClipboardUtility.RegisterClipboardFormat("Jw_win");
-            if (id != 0) ClipboardUtility.SetClipboardData(id, h);
-            ClipboardUtility.CloseClipboard();
         }
 
     }

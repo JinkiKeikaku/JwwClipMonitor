@@ -326,7 +326,8 @@ namespace JwwClipMonitor.Emf
 
         public void OnEmfPolyBezier(EmfRecord record, EmrPolygon ppl)
         {
-            SkipRecord(record);
+            var pts = ToPaper(ppl.Points);
+            OnPolyBezier(pts, false);
         }
 
         public void OnEmfPolyBezierTo(EmfRecord record, EmrPolygon ppl)

@@ -61,6 +61,16 @@ namespace JwwClipMonitor.Properties {
         }
         
         /// <summary>
+        ///   型 System.Byte[] のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static byte[] template {
+            get {
+                object obj = ResourceManager.GetObject("template", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
         ///   JwwClipManager に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Title_App {

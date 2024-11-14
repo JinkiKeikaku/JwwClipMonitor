@@ -92,8 +92,6 @@ namespace JwwClipMonitor
         /// <summary>
         /// Jww‚ğ‘¼Œ`®‚É•ÏŠ·‚·‚éƒ{ƒ^ƒ“‚Ìˆ—
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private void btnConvert_Click(object sender, EventArgs e)
         {
             var item = listCopy.SelectedItem as ClipboardFormat;

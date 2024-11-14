@@ -15,6 +15,8 @@ namespace JwwClipMonitor.Jww.Shape
         Color Color;
         List<CadPoint> Points = new();
 
+
+
         public SolidPolygon(StyleConverter sc, JwwSolid s)
         {
             Points.Add(new CadPoint(s.m_start_x, s.m_start_y));
@@ -25,7 +27,18 @@ namespace JwwClipMonitor.Jww.Shape
             if (PointEQ(Points[0], Points[2])) Points.RemoveAt(2);
             Color = s.m_nPenColor == 10 ? s.m_Color.ToColor(): sc.PenToColor(s.m_nPenColor);
         }
-        
+
+        public SolidPolygon(Color color, IReadOnlyList<CadPoint> points)
+        {
+            Color = color;
+            PolylineHelper.CopyPoints(points);
+        }
+
+        public IShape Clone()
+        {
+            return new SolidPolygon(Color, Points);
+        }
+
         public CadRect GetExtent() => CadRect.GetBounds(Points);
         
         public void OnDraw(Graphics g, DrawContext d)
@@ -45,5 +58,18 @@ namespace JwwClipMonitor.Jww.Shape
                 g.FillPolygon(b, pts);
             }
         }
+        public void Offset(double dx, double dy)
+        {
+            foreach(var p in Points) p.Offset(dx, dy);
+        }
+        public void Rotate(CadPoint p0, double angleRad)
+        {
+            foreach (var p in Points) p.Rotate(p0, angleRad);
+        }
+        public void Scale(CadPoint p0, double mx, double my)
+        {
+            foreach (var p in Points) p.Magnify(p0, mx, my);
+        }
+
     }
 }

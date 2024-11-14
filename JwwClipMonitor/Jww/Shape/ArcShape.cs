@@ -1,4 +1,5 @@
 ﻿using CadMath2D;
+using CadMath2D.Parameters;
 using JwwHelper;
 using System;
 using System.Collections.Generic;
@@ -20,6 +21,7 @@ namespace JwwClipMonitor.Jww.Shape
         public double SweepAngle;
         public LineStyle LineStyle = new();
 
+
         public ArcShape(StyleConverter sc, JwwEnko s)
         {
             P0.Set(s.m_start_x, s.m_start_y);
@@ -30,9 +32,30 @@ namespace JwwClipMonitor.Jww.Shape
             SweepAngle = RadToDeg(s.m_radEnkoKaku);
             LineStyle.Set(sc, s);
         }
+
+        public ArcShape(
+            CadPoint p0, double radius, double flatness, double angle, 
+            double startAngle, double sweepAngle, LineStyle lineStyle)
+        {
+            P0.Set(p0);
+            Radius = radius;
+            Flatness = flatness;
+            Angle = angle;
+            StartAngle = startAngle;
+            SweepAngle = sweepAngle;
+            LineStyle.Set(lineStyle);
+        }
+
+        public IShape Clone()
+        {
+            return new ArcShape(P0, Radius, Flatness, Angle, StartAngle, SweepAngle, LineStyle);
+        }
+
         public CadRect GetExtent()
         {
-            return Helpers.ArcExtent(P0, Radius, Flatness, DegToRad(Angle), DegToRad(StartAngle), DegToRad(SweepAngle));
+            var r = Helpers.ArcExtent(P0, Radius, Flatness, DegToRad(Angle), DegToRad(StartAngle), DegToRad(StartAngle+SweepAngle));
+            r.Inflate(LineStyle.Width, LineStyle.Width);
+            return r;
         }
         public void OnDraw(Graphics g, DrawContext d)
         {
@@ -60,7 +83,28 @@ namespace JwwClipMonitor.Jww.Shape
             if (!FloatEQ(Angle, 0.0)) g.RotateTransform(d.DocToCanvasAngle(Angle));
             LineStyle.DrawLines(g, d, points, false);
             g.Restore(saved);
+            //var rr = d.DocToCanvas(GetExtent());
+            //g.DrawRectangle(d.Pen, rr.X, rr.Y, rr.Width, rr.Height);
+        }
+        public void Offset(double dx, double dy)
+        {
+            P0.Offset(dx, dy);
         }
 
+        public void Rotate(CadPoint p0, double angleRad)
+        {
+            P0.Rotate(p0, angleRad);
+            Angle = NormalizeAngle360(Angle + RadToDeg(angleRad));
+        }
+        public void Scale(CadPoint p0, double mx, double my)
+        {
+            var pa = new OvalArcParameter(P0, Radius, Flatness, Angle, StartAngle, SweepAngle);
+            P0.Set(pa.P0);
+            Radius = pa.Radius;
+            Flatness = pa.Flatness;
+            Angle = pa.Angle;
+            StartAngle = pa.StartAngle;
+            SweepAngle = pa.SweepAngle;
+        }
     }
 }

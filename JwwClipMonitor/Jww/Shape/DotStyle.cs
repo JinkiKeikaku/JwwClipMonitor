@@ -12,6 +12,12 @@ namespace JwwClipMonitor.Jww.Shape
         public Color Color;
         public float Width = 0.25f;
 
+        public void Set(DotStyle src)
+        {
+            Color = src.Color;
+            Width = src.Width;
+        }
+
         public void Set(StyleConverter sc, JwwData s)
         {
             Color = sc.PenToColor(s.m_nPenColor);

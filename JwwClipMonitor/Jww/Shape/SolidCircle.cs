@@ -12,6 +12,9 @@ using static System.Math;
 using System.Drawing.Drawing2D;
 using CadMath2D.Path;
 using CadMath2D.Curves;
+using System.Drawing;
+using System.Reflection.Metadata;
+using CadMath2D.Parameters;
 
 namespace JwwClipMonitor.Jww.Shape
 {
@@ -21,7 +24,6 @@ namespace JwwClipMonitor.Jww.Shape
         {
             Circle, Chord, Pie, Outer, DonutSameRatio, DonutSameWidth, Circumference, CircumferenceArc
         }
-        public SolidType CircleType = SolidType.Circle;
         public CadPoint P0 = new();
         public double Radius;
         public double InnerRadius;
@@ -29,8 +31,10 @@ namespace JwwClipMonitor.Jww.Shape
         public double Angle;
         public double StartAngle;
         public double SweepAngle;
-
         public Color Color;
+        public SolidType CircleType = SolidType.Circle;
+
+
 
         public SolidCircle(StyleConverter sc, JwwSolid s)
         {
@@ -70,6 +74,28 @@ namespace JwwClipMonitor.Jww.Shape
                 };
             }
         }
+
+        public SolidCircle(
+            CadPoint p0, double radius, double innerRadius, double flatness, double angle, 
+            double startAngle, double sweepAngle, Color color, SolidType circleType)
+        {
+            P0.Set(p0);
+            Radius = radius;
+            InnerRadius = innerRadius;
+            Flatness = flatness;
+            Angle = angle;
+            StartAngle = startAngle;
+            SweepAngle = sweepAngle;
+            Color = color;
+            CircleType = circleType;
+        }
+        public IShape Clone()
+        {
+            return new SolidCircle(
+                P0, Radius, InnerRadius, Flatness, Angle, 
+                StartAngle, SweepAngle, Color, CircleType);
+        }
+            
 
         public CadRect GetExtent()
         {
@@ -118,6 +144,30 @@ namespace JwwClipMonitor.Jww.Shape
                 default:
                     return Helpers.ArcExtent(P0, Radius, Flatness, a, 0, PI * 2.0);
             }
+        }
+
+        public void Offset(double dx, double dy)
+        {
+            P0.Offset(dx, dy);
+        }
+
+        public void Rotate(CadPoint p0, double angleRad)
+        {
+            P0.Rotate(p0, angleRad);
+            Angle = NormalizeAngle360(Angle + RadToDeg(angleRad));
+        }
+
+        public void Scale(CadPoint p0, double mx, double my)
+        {
+            var oldRadius = Radius;
+            var pa = new OvalArcParameter(P0, Radius, Flatness, Angle, StartAngle, SweepAngle);
+            P0.Set(pa.P0);
+            Radius = pa.Radius;
+            Flatness = pa.Flatness;
+            Angle = pa.Angle;
+            StartAngle = pa.StartAngle;
+            SweepAngle = pa.SweepAngle;
+            InnerRadius = InnerRadius * Radius / oldRadius;
         }
 
         private CadPoint OuterPointNotRotateNotAddP0()

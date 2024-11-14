@@ -25,7 +25,7 @@ namespace JwwClipMonitor.Jww
             var org = dc.DocToCanvas(p0);
             g.ScaleTransform(Scale, Scale);
             g.TranslateTransform(-org.X, -org.Y);
-            foreach(var s in doc.Shapes)
+            foreach (var s in doc.Shapes)
             {
                 s.OnDraw(g, dc);
             }

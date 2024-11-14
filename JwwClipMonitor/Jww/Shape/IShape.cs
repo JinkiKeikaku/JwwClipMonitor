@@ -11,5 +11,9 @@ namespace JwwClipMonitor.Jww.Shape
     {
         void OnDraw(Graphics g, DrawContext d);
         CadRect GetExtent();
+        IShape Clone();
+        void Offset(double dx, double dy);
+        void Rotate(CadPoint p0, double angleRad);
+        void Scale(CadPoint p0, double mx, double my);
     }
 }

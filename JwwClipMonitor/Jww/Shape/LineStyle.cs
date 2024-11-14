@@ -14,6 +14,12 @@ namespace JwwClipMonitor.Jww.Shape
         public float Width = DefaultLineWidth;
         public float[]? Pattern;
 
+        public void Set(LineStyle src)
+        {
+            Color = src.Color;
+            Width = src.Width;
+            Pattern = src.Pattern;
+        }
         public void Set(StyleConverter sc, JwwData s)
         {
             Color = sc.PenToColor(s.m_nPenColor);

@@ -8,16 +8,18 @@ using static System.Math;
 using static CadMath2D.CadMath;
 using JwwHelper;
 using CadMath2D.Parameters;
+using System.Reflection.Metadata;
 
 namespace JwwClipMonitor.Jww.Shape
 {
-    internal class CircleShape:IShape
+    internal class CircleShape : IShape
     {
-        public CadPoint P0=new();
+        public CadPoint P0 = new();
         public double Radius;
         public double Flatness;
         public double Angle;
         public LineStyle LineStyle = new();
+
 
         public CircleShape(StyleConverter sc, JwwEnko s)
         {
@@ -28,14 +30,27 @@ namespace JwwClipMonitor.Jww.Shape
             LineStyle.Set(sc, s);
         }
 
+        public CircleShape(CadPoint p0, double radius, double flatness, double angle, LineStyle lineStyle)
+        {
+            P0.Set(p0);
+            Radius = radius;
+            Flatness = flatness;
+            Angle = angle;
+            LineStyle.Set(lineStyle);
+        }
+
+        public IShape Clone()=> new CircleShape(P0, Radius, Flatness, Angle, LineStyle);
+
         public CadRect GetExtent()
         {
-            return Helpers.ArcExtent(P0, Radius, Flatness, DegToRad(Angle), 0, PI * 2.0);
+            var r = Helpers.ArcExtent(P0, Radius, Flatness, DegToRad(Angle), 0, PI * 2.0);
+            r.Inflate(LineStyle.Width, LineStyle.Width);
+            return r;
         }
 
         public void OnDraw(Graphics g, DrawContext d)
         {
-            var saved=g.Save();
+            var saved = g.Save();
             int n = 1;
             double dt = 0;
             double dr = double.MaxValue;
@@ -70,6 +85,25 @@ namespace JwwClipMonitor.Jww.Shape
             if (!FloatEQ(Angle, 0.0)) g.RotateTransform(d.DocToCanvasAngle(Angle));
             LineStyle.DrawLines(g, d, points, true);
             g.Restore(saved);
+            //var rr = d.DocToCanvas(GetExtent());
+            //g.DrawRectangle(d.Pen, rr.X, rr.Y, rr.Width, rr.Height);
+        }
+        public void Offset(double dx, double dy)
+        {
+            P0.Offset(dx, dy);
+        }
+        public void Rotate(CadPoint p0, double angleRad)
+        {
+            P0.Rotate(p0, angleRad);
+            Angle = NormalizeAngle360(Angle + RadToDeg(angleRad));
+        }
+        public void Scale(CadPoint p0, double mx, double my)
+        {
+            var pa = new OvalParameter(P0, Radius, Flatness, Angle);
+            P0.Set(pa.P0);
+            Radius = pa.Radius;
+            Flatness = pa.Flatness;
+            Angle = pa.Angle;
         }
     }
 }

@@ -9,12 +9,20 @@ namespace JwwClipMonitor.Jww.Shape
 {
     internal class TextStyle
     {
-        public string FontName="Arial";
+        public string FontName = "Arial";
         public float Height;
         public float Width;
         public float Space;
         public Color Color;
 
+        public void Set(TextStyle src)
+        {
+            FontName = src.FontName;
+            Height = src.Height;
+            Width = src.Width;
+            Space = src.Space; ;
+            Color = src.Color;
+        }
         public void Set(StyleConverter sc, JwwMoji s)
         {
             Color = sc.PenToColor(s.m_nPenColor);

@@ -66,23 +66,23 @@ namespace JwwClipMonitor.Jww
             return -(float)angle;
         }
 
-        public void ApplyLineStyle(LineStyle lineStyle)
-        {
-            Pen.Color = lineStyle.Color;
-            Pen.Width = lineStyle.Width;
-            if(lineStyle.Pattern == null)
-            {
-                Pen.DashStyle = DashStyle.Solid;
-            }
-            else
-            {
-                Pen.DashStyle = DashStyle.Custom;
-                Pen.DashPattern = lineStyle.Pattern;
-            }
-        }
+        //public void ApplyLineStyle(LineStyle lineStyle)
+        //{
+        //    Pen.Color = lineStyle.Color;
+        //    Pen.Width = lineStyle.Width;
+        //    if(lineStyle.Pattern == null)
+        //    {
+        //        Pen.DashStyle = DashStyle.Solid;
+        //    }
+        //    else
+        //    {
+        //        Pen.DashStyle = DashStyle.Custom;
+        //        Pen.DashPattern = lineStyle.Pattern;
+        //    }
+        //}
         public void ApplyDotStyle(DotStyle dotStyle)
         {
-            Pen.Color = dotStyle.Color;
+            Pen.Color = LineStyle.ConvertDrawColor(dotStyle.Color);
             Pen.Width = dotStyle.Width;
             Pen.DashStyle = DashStyle.Solid;
         }

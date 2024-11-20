@@ -66,8 +66,8 @@ namespace JwwClipMonitor.Jww
                 case JwwMoji s:
                 {
                     //画像は未対応
-                    //var img = CreateImageShape(s);
-                    //if (img != null) return img;
+                    var img = CreateImageShape(s);
+                    if (img != null) return img;
                     if (Abs(s.m_end_x - s.m_start_x) <= 0.1 && Abs(s.m_end_y - s.m_start_y) <= 0.1) return null;
                     return new TextShape(sc, s);
                 }

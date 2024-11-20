@@ -8,45 +8,15 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using static System.Math;
-
+using static CadMath2D.CadMath;
 namespace JwwClipMonitor
 {
     public partial class Form1 : Form
     {
-        private List<ClipboardFormat> mPasteSupportFormatList = new ();
-        private List<ClipboardFormat> mCopySupportFormatList = new ();
-        public BindingList<ClipboardFormat> PasteFormatList { get; } = new();
-        private IntPtr mLastImageHandle = IntPtr.Zero;
-        private ClipboardViewer mClipboardViewer = null!;
-        public Form1()
-        {
-            InitializeComponent();
-            this.Text = Resources.Title_App;
-            mPasteSupportFormatList.Add(new("DIB", ClipboardUtility.CF_DIB));
-            mPasteSupportFormatList.Add(new("Bitmap", ClipboardUtility.CF_BITMAP));
-            mPasteSupportFormatList.Add(new("PNG", ClipboardImageToJww.PngId));
-            mPasteSupportFormatList.Add(new("Enhanced Meta File", ClipboardUtility.CF_ENHMETAFILE));
-            listPaste.DataSource = PasteFormatList;
-
-            mCopySupportFormatList.Add(new("Bitmap", ClipboardUtility.CF_BITMAP));
-            mCopySupportFormatList.Add(new("PNG", ClipboardImageToJww.PngId));
-            mCopySupportFormatList.Add(new("Enhanced Meta File", ClipboardUtility.CF_ENHMETAFILE));
-            listCopy.DataSource = mCopySupportFormatList;
-
-            cmbScale.DataSource = Scales;
-            cmbScale.ValueMember = "Scale";
-            cmbScale.DisplayMember = "Name";
-            cmbScale.SelectedValue = 1.0;
-            mClipboardViewer = new ClipboardViewer(this, () =>
-            {
-                UpdatePasteFormatList();
-                UpdatePreview();
-            });
-        }
-
         internal static readonly PaperScale[] Scales = new PaperScale[] {
             new PaperScale("5:1", 5.0),
             new PaperScale("2:1", 2.0),
@@ -62,9 +32,85 @@ namespace JwwClipMonitor
             new PaperScale("1:1000", 0.001),
         };
 
+        private List<ClipboardFormat> mToJwwFormatList = new();
+        private List<ClipboardFormat> mFromJwwFormatList = new();
+        private ClipboardViewer mClipboardViewer;
+        private Point mMouseDragPosition = new();
+        private int mConvertMode = Settings.Default.ConvertMode;
+        private ClipboardFormat? mLastToJwwFormat = null;
+        private ClipboardFormat? mLastFromJwwFormat = null;
+
+        public Form1()
+        {
+            InitializeComponent();
+            this.Text = $"{Resources.Title_App} ver.{SystemUtility.GetAppVersion()}";
+            mToJwwFormatList.Add(new("DIB->Jw_cad", ClipboardUtility.CF_DIB, true));
+            mToJwwFormatList.Add(new("Bitmap->Jw_cad", ClipboardUtility.CF_BITMAP, true));
+            mToJwwFormatList.Add(new("PNG->Jw_cad", ClipboardImageToJww.PngId, true));
+            mToJwwFormatList.Add(new("EMF->Jw_cad", ClipboardUtility.CF_ENHMETAFILE, true));
+            mFromJwwFormatList.Add(new("Jw_cad->Bitmap", ClipboardUtility.CF_BITMAP, false));
+            mFromJwwFormatList.Add(new("Jw_cad->PNG", ClipboardImageToJww.PngId, false));
+            mFromJwwFormatList.Add(new("Jw_cad->EMF", ClipboardUtility.CF_ENHMETAFILE, false));
+            listFormat.DataSource = FormatList;
+            cmbScale.DataSource = Scales;
+            cmbScale.ValueMember = "Scale";
+            cmbScale.DisplayMember = "Name";
+            cmbScale.SelectedValue = 1.0;
+            mClipboardViewer = new ClipboardViewer(this, () =>
+            {
+                UpdateFormatList();
+                UpdatePreview();
+            });
+        }
+        public BindingList<ClipboardFormat> FormatList { get; } = new();
         private void Form1_Load(object sender, EventArgs e)
         {
             ChangeButtonState();
+            TopMost = Settings.Default.IsTopMost;
+            pictureBox1.MouseDown += (sender, e) =>
+            {
+                if ((e.Button & MouseButtons.Left) == MouseButtons.Left)
+                {
+                    //位置を記憶する
+                    mMouseDragPosition = new Point(e.X, e.Y);
+                }
+            };
+            pictureBox1.MouseMove += (sender, e) =>
+            {
+                if ((e.Button & MouseButtons.Left) == MouseButtons.Left)
+                {
+                    this.Left += e.X - mMouseDragPosition.X;
+                    this.Top += e.Y - mMouseDragPosition.Y;
+                }
+            };
+            var radios = panelDirection.Controls.OfType<RadioButton>();
+
+            foreach (var radio in radios)
+            {
+                radio.CheckedChanged += (object? sender, EventArgs e) =>
+                {
+                    if (sender is RadioButton r)
+                    {
+                        if (r.Checked)
+                        {
+                            int.TryParse(r.Tag.ToString(), out mConvertMode);
+                            UpdateFormatList();
+                            UpdatePreview();
+                            ChangeButtonState();
+                            Settings.Default.ConvertMode = mConvertMode;
+                        }
+                    }
+                };
+                if (int.TryParse(radio.Tag.ToString(), out var x) && x == mConvertMode) radio.Checked = true;
+            }
+            var i = Array.FindIndex(Scales, x => FloatEQ(x.Scale, Settings.Default.Scale));
+            if (i < 0) i = 0;
+            cmbScale.SelectedIndex = i;
+            cmbScale.SelectedIndexChanged += (object? sender, EventArgs e) =>
+            {
+                var i = cmbScale.SelectedIndex;
+                if (i >= 0 && i < Scales.Length) Settings.Default.Scale = Scales[i].Scale;
+            };
         }
 
         private void timer1_Tick(object sender, EventArgs e)
@@ -74,66 +120,85 @@ namespace JwwClipMonitor
             timer1.Start();
         }
 
-        private void btnToJww_Click(object sender, EventArgs e)
-        {
-            var item = listPaste.SelectedItem as ClipboardFormat;
-            if (item == null) return;
-            var scale = (cmbScale.SelectedItem as PaperScale)?.Scale ?? 1.0;
-            ClipboardImageToJww.ConvertToJww(this.Handle, item.FormatId, scale);
-        }
-
         private void btnSave_Click(object sender, EventArgs e)
         {
-            var item = listPaste.SelectedItem as ClipboardFormat;
-            if (item == null) return;
-            Save(item);
+            var item = listFormat.SelectedItem as ClipboardFormat;
+            if (item != null) Save(item);
         }
 
         /// <summary>
-        /// Jwwを他形式に変換するボタンの処理
+        /// 変換ボタンの処理
         /// </summary>
         private void btnConvert_Click(object sender, EventArgs e)
         {
-            var item = listCopy.SelectedItem as ClipboardFormat;
+            var item = listFormat.SelectedItem as ClipboardFormat;
             if (item == null) return;
-            switch (item.FormatId)
+            if (item.ToJww)
             {
-                case ClipboardUtility.CF_BITMAP:
-                {
-                    var bmp = ClipboardJwwToImage.JwwToImage(Color.White, false);
-                    if (bmp == null) return;
-                    Clipboard.SetImage(bmp);
-                }
-                break;
-                case ClipboardUtility.CF_ENHMETAFILE:
-                    var mf = ClipboardJwwToImage.JwwToMetafile();
-                    if(mf == null) return;
-                    var h = mf.GetHenhmetafile();
-                    if (ClipboardUtility.OpenClipboard(Handle))
-                    {
-                        ClipboardUtility.EmptyClipboard();
-                        ClipboardUtility.SetClipboardData(ClipboardUtility.CF_ENHMETAFILE, h);
-                        ClipboardUtility.CloseClipboard();
-                    }
-                        break;
-                default:
-                    if(item.FormatId == ClipboardImageToJww.PngId)
-                    {
-                        var bmp = ClipboardJwwToImage.JwwToImage(Color.Transparent, true);
-                        if (bmp == null) return;
-                        if (ClipboardUtility.OpenClipboard(Handle))
-                        {
-                            ClipboardUtility.EmptyClipboard();
-                            using var ms = new MemoryStream();
-                            bmp.Save(ms, ImageFormat.Png);
-                            ms.Flush();
-                            ClipboardUtility.SetClipboardData(ClipboardUtility.RegisterClipboardFormat("PNG"), ms.ToArray());
-                            ClipboardUtility.CloseClipboard();
-                        }
-                    }
-                    break;
+                var scale = Settings.Default.Scale;// Validate (cmbScale.SelectedItem as PaperScale)?.Scale ?? 1.0;
+                ClipboardImageToJww.ConvertToJww(this.Handle, item.FormatId, scale);
             }
+            else
+            {
+                if (item.FormatId == ClipboardImageToJww.PngId) CopyJwwAsPng();
+                else if (item.FormatId == ClipboardUtility.CF_BITMAP) CopyJwwAsBitmap();
+                else if (item.FormatId == ClipboardUtility.CF_ENHMETAFILE) CopyJwwAsEmf();
+            }
+        }
 
+        private void btnSettings_Click(object sender, EventArgs e)
+        {
+            var d = new SettingsForm();
+            TopMost = false;
+            if (d.ShowDialog(this) == DialogResult.OK)
+            {
+                UpdatePreview();
+            }
+            TopMost = Settings.Default.IsTopMost;
+        }
+
+        private void ChangeButtonState()
+        {
+            var item = listFormat.SelectedItem as ClipboardFormat;
+            btnConvert.Enabled = item != null;
+            btnSave.Enabled = item != null;
+            cmbScale.Enabled = mConvertMode == 0;// item?.ToJww == true;// && item?.FormatId == ClipboardUtility.CF_ENHMETAFILE;
+        }
+
+        private void CopyJwwAsBitmap()
+        {
+            var bg = Settings.Default.BgColor;
+            var bmp = ClipboardJwwToImage.JwwToImage(bg, false);
+            if (bmp == null) return;
+            Clipboard.SetImage(bmp);
+        }
+        private void CopyJwwAsPng()
+        {
+            var bg = Settings.Default.IsPngTransparent ? Color.Transparent : Settings.Default.BgColor;
+            var bmp = ClipboardJwwToImage.JwwToImage(bg, true);
+            if (bmp == null) return;
+
+            using var ms = new MemoryStream();
+            bmp.Save(ms, ImageFormat.Png);
+            ms.Flush();
+            if (ClipboardUtility.OpenClipboard(Handle))
+            {
+                ClipboardUtility.EmptyClipboard();
+                ClipboardUtility.SetClipboardData(ClipboardUtility.RegisterClipboardFormat("PNG"), ms.ToArray());
+                ClipboardUtility.CloseClipboard();
+            }
+        }
+        private void CopyJwwAsEmf()
+        {
+            var mf = ClipboardJwwToImage.JwwToMetafile();
+            if (mf == null) return;
+            var h = mf.GetHenhmetafile();
+            if (ClipboardUtility.OpenClipboard(Handle))
+            {
+                ClipboardUtility.EmptyClipboard();
+                ClipboardUtility.SetClipboardData(ClipboardUtility.CF_ENHMETAFILE, h);
+                ClipboardUtility.CloseClipboard();
+            }
         }
 
         private void Save(ClipboardFormat item)
@@ -145,22 +210,46 @@ namespace JwwClipMonitor
                 item.FormatId == ClipboardImageToJww.PngId)
             {
                 d.Filter = "Bitmap file (*.bmp)|*.bmp|PNG file (*.png)|*.png";
-                d.FilterIndex = 1;
+                d.FilterIndex = item.FormatId == ClipboardImageToJww.PngId ? 2 : 1;
                 if (d.ShowDialog(this) == DialogResult.OK)
                 {
-                    using var image = ClipboardImageToJww.GetBitmapImageFromClipboard(item.FormatId);
-                    if (image != null)
+                    Image? image = null;
+                    try
                     {
-                        if (d.FilterIndex == 1)
+                        if (item.ToJww)
                         {
-                            image.Save(d.FileName, ImageFormat.Bmp);
-                            return;
+                            image = ClipboardImageToJww.GetBitmapImageFromClipboard(item.FormatId);
                         }
-                        if (d.FilterIndex == 2)
+                        else
                         {
-                            image.Save(d.FileName, ImageFormat.Png);
-                            return;
+                            if (item.FormatId == ClipboardImageToJww.PngId)
+                            {
+                                var bg = Settings.Default.IsPngTransparent ? Color.Transparent : Settings.Default.BgColor;
+                                image = ClipboardJwwToImage.JwwToImage(bg, true);
+                            }
+                            else
+                            {
+                                var bg = Settings.Default.BgColor;
+                                image = ClipboardJwwToImage.JwwToImage(bg, false);
+                            }
                         }
+                        if (image != null)
+                        {
+                            if (d.FilterIndex == 1)
+                            {
+                                image.Save(d.FileName, ImageFormat.Bmp);
+                                return;
+                            }
+                            if (d.FilterIndex == 2)
+                            {
+                                image.Save(d.FileName, ImageFormat.Png);
+                                return;
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        image?.Dispose();
                     }
                 }
                 return;
@@ -171,114 +260,166 @@ namespace JwwClipMonitor
                 d.FilterIndex = 1;
                 if (d.ShowDialog(this) == DialogResult.OK)
                 {
-                    using var ms = ClipboardImageToJww.GetEmfFromClipboard(Handle);
-                    if (ms == null) return;
-                    File.WriteAllBytes(d.FileName, ms.ToArray());
+                    if (item.ToJww)
+                    {
+                        using var ms = ClipboardImageToJww.GetEmfFromClipboard(Handle);
+                        if (ms == null) return;
+                        File.WriteAllBytes(d.FileName, ms.ToArray());
+                    }
+                    else
+                    {
+                        var mf = ClipboardJwwToImage.JwwToMetafile();
+                        if (mf != null)
+                        {
+                            var h = mf.GetHenhmetafile();
+                            if (h != IntPtr.Zero)
+                            {
+                                uint bufferSize = ClipboardUtility.GetEnhMetaFileBits(h, 0, null);
+                                var dataArray = new byte[bufferSize];
+                                ClipboardUtility.GetEnhMetaFileBits(h, bufferSize, dataArray);
+                                File.WriteAllBytes(d.FileName, dataArray);
+                                ClipboardUtility.DeleteEnhMetaFile(h);
+                            }
+                        }
+                    }
                 }
                 return;
             }
 
         }
 
-        private bool UpdatePasteFormatList()
+        private bool mListChanging = false;
+        private bool UpdateFormatList()
         {
-            var list = new List<ClipboardFormat>();
-            foreach (var s in mPasteSupportFormatList)
+            try
             {
-                if (ClipboardUtility.IsClipboardFormatAvailable(s.FormatId)) list.Add(s);
-            }
-            var changed = false;
-            for (var i = PasteFormatList.Count - 1; i >= 0; i--)
-            {
-                if (!list.Contains(PasteFormatList[i]))
+                mListChanging = true;
+                var list = new List<ClipboardFormat>();
+                if (mConvertMode == 1)
                 {
-                    PasteFormatList.RemoveAt(i);
-                    changed = true;
+                    if (ClipboardUtility.IsClipboardFormatAvailable(ClipboardJwwToImage.JwwId))
+                    {
+                        list.AddRange(mFromJwwFormatList);
+                    }
                 }
-            }
-            for (var i = 0; i < list.Count; i++)
-            {
-                if (!PasteFormatList.Contains(list[i]))
+                if (mConvertMode == 0)
                 {
-                    PasteFormatList.Add(list[i]);
-                    changed = true;
+                    foreach (var s in mToJwwFormatList)
+                    {
+                        if (ClipboardUtility.IsClipboardFormatAvailable(s.FormatId)) list.Add(s);
+                    }
                 }
+                var changed = false;
+                for (var i = FormatList.Count - 1; i >= 0; i--)
+                {
+                    if (!list.Contains(FormatList[i]))
+                    {
+                        FormatList.RemoveAt(i);
+                        changed = true;
+                    }
+                }
+                for (var i = 0; i < list.Count; i++)
+                {
+                    if (!FormatList.Contains(list[i]))
+                    {
+                        FormatList.Add(list[i]);
+                        changed = true;
+                    }
+                }
+
+                if (mConvertMode == 0)
+                {
+                    if (mLastToJwwFormat != null)
+                    {
+                        var i = FormatList.IndexOf(mLastToJwwFormat);
+                        if (i >= 0) listFormat.SelectedIndex = i;
+                    }
+                }
+                else if (mConvertMode == 1)
+                {
+                    if (mLastFromJwwFormat != null)
+                    {
+                        var i = FormatList.IndexOf(mLastFromJwwFormat);
+                        if (i >= 0)
+                        {
+                            listFormat.SelectedIndex = i;
+                        }
+                    }
+                }
+                return changed;
             }
-            return changed;
+            finally
+            {
+                mListChanging = false;
+            }
         }
 
         private void UpdatePreview()
         {
-            switch (tabControl1.SelectedIndex)
-            {
-                case 0:
-                    PreviewImage();
-                    break;
-                case 1:
-                    PreviewJww();
-                    break;
-            }
-        }
-
-        private void PreviewJww()
-        {
-            var bmp = ClipboardJwwToImage.JwwToImage(Color.Transparent, true);
             pictureBox1.Image?.Dispose();
             pictureBox1.Image = null;
-            if(bmp != null)
-            {
-                pictureBox1.Image = bmp;
-            }
-        }
-
-        private void PreviewImage()
-        {
-            if (listPaste.Items.Count == 0)
-            {
-                if (mLastImageHandle != IntPtr.Zero) pictureBox1.Image = null;
-                return;
-            }
-            var item = listPaste.SelectedItem as ClipboardFormat;
+            if (listFormat.Items.Count == 0) return;
+            var item = listFormat.SelectedItem as ClipboardFormat;
             if (item == null) return;
-            if (ClipboardUtility.OpenClipboard(Handle))
+            if (item.ToJww)
             {
-                mLastImageHandle = ClipboardUtility.GetClipboardData(item.FormatId);
-            }
-            ClipboardUtility.CloseClipboard();
-            if (item.FormatId == ClipboardUtility.CF_ENHMETAFILE)
-            {
-                if (ClipboardUtility.OpenClipboard(Handle))
+                if (item.FormatId == ClipboardUtility.CF_ENHMETAFILE)
                 {
+                    if (!ClipboardUtility.OpenClipboard(Handle)) return;
                     var ptr = ClipboardUtility.GetClipboardData(ClipboardUtility.CF_ENHMETAFILE);
-                    if (!ptr.Equals(IntPtr.Zero))
-                    {
-                        pictureBox1.Image?.Dispose();
-                        pictureBox1.Image = new Metafile(ptr, true);
-                    }
+                    if (!ptr.Equals(IntPtr.Zero)) pictureBox1.Image = new Metafile(ptr, true);
+                    ClipboardUtility.CloseClipboard();
                 }
-                ClipboardUtility.CloseClipboard();
+                else
+                {
+                    pictureBox1.Image = ClipboardImageToJww.GetBitmapImageFromClipboard(item.FormatId);
+                }
             }
             else
             {
-                pictureBox1.Image?.Dispose();
-                pictureBox1.Image = ClipboardImageToJww.GetBitmapImageFromClipboard(item.FormatId);
+                var bg = Settings.Default.BgColor;
+                if (item.FormatId == ClipboardUtility.CF_ENHMETAFILE ||
+                    (item.FormatId == ClipboardImageToJww.PngId && Settings.Default.IsPngTransparent))
+                {
+                    bg = Color.Transparent;
+                }
+                var bmp = ClipboardJwwToImage.JwwToImage(bg, true);
+                if (bmp != null) pictureBox1.Image = bmp;
             }
         }
 
-        private void ChangeButtonState()
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            btnToJww.Enabled = listPaste.SelectedIndex >= 0;
-            btnSave.Enabled = listPaste.SelectedIndex >= 0;
-            btnConvert.Enabled = pictureBox1.Image != null;
-            var item = listPaste.SelectedItem as ClipboardFormat;
-            cmbScale.Enabled = item?.FormatId == ClipboardUtility.CF_ENHMETAFILE;
+            Settings.Default.Save();
         }
 
-        private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
+        private void listFormat_SelectedIndexChanged(object sender, EventArgs e)
         {
-            UpdatePasteFormatList();
+            if (!mListChanging)
+            {
+                if (mConvertMode == 0)
+                {
+                    var a = listFormat.SelectedItem as ClipboardFormat;
+                    if (a != null) mLastToJwwFormat = a;
+                }
+                else if (mConvertMode == 1)
+                {
+                    var a = listFormat.SelectedItem as ClipboardFormat;
+                    if (a != null) mLastFromJwwFormat = a;
+                }
+            }
             UpdatePreview();
         }
 
+        private void Form1_HelpRequested(object sender, HelpEventArgs hlpevent)
+        {
+            hlpevent.Handled = true;
+        }
+
+        private void btnHelp_Click(object sender, EventArgs e)
+        {
+            var s = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PreCAD_windows_manual.html");
+            if (File.Exists(s)) SystemUtility.OpenURL(s);
+        }
     }
 }

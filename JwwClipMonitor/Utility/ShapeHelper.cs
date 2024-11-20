@@ -17,16 +17,11 @@ namespace JwwClipMonitor.Utility
         {
             return Color.FromArgb(c.Red, c.Green, c.Blue);
         }
-
-        public static Font GetDefaultFont() => System.Drawing.SystemFonts.DefaultFont;
-
-        public static string GetDefaultFontName() => GetDefaultFont().Name;
-
         public static string GetValidFontName(string name)
         {
             var f = new Font(name, 12);
             if (f.Name == name) return name;
-            return GetDefaultFontName();
+            return SystemUtility.GetDefaultFontName();
         }
 
         public static (SizeF size, double ry) GetStringSize(string s, TextStyle ts, double h)

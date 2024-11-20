@@ -15,6 +15,7 @@ using CadMath2D.Curves;
 using System.Drawing;
 using System.Reflection.Metadata;
 using CadMath2D.Parameters;
+using JwwClipMonitor.Properties;
 
 namespace JwwClipMonitor.Jww.Shape
 {
@@ -273,14 +274,14 @@ namespace JwwClipMonitor.Jww.Shape
                     g.FillEllipse(b, r);
                     break;
                 case SolidType.Circumference:
-                    d.Pen.Width = LineStyle.DefaultLineWidth;
+                    d.Pen.Width = Settings.Default.LineWidth;
                     d.Pen.DashStyle = DashStyle.Solid;
                     d.Pen.Color = Color;
                     g.ScaleTransform(1.0f, (float)Flatness);
                     g.DrawEllipse(d.Pen, r.X, r.Y, r.Width, r.Height);
                     break;
                 case SolidType.CircumferenceArc:
-                    d.Pen.Width = LineStyle.DefaultLineWidth;
+                    d.Pen.Width = Settings.Default.LineWidth;
                     d.Pen.DashStyle = DashStyle.Solid;
                     d.Pen.Color = Color;
                     g.ScaleTransform(1.0f, (float)Flatness);

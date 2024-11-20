@@ -35,6 +35,8 @@ namespace JwwClipMonitor.Utility
 
         [DllImport("gdi32")]
         public static extern uint GetEnhMetaFileBits(IntPtr hemf, uint cbBuffer, byte[]? lpbBuffer);
+        [DllImport("gdi32.dll")]
+        public static extern int DeleteEnhMetaFile(IntPtr hemf);
 
         public static bool SetClipboardData(int formatId, byte[] data)
         {

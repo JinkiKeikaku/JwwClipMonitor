@@ -33,7 +33,7 @@ namespace JwwClipMonitor.Jww.Shape
 
         public CadRect GetExtent()
         {
-            var r = new CadRect(P0, new CadSize(Width, Height));
+            var r = new CadRect(P0, P0 + new CadPoint(Width, Height));
             r.SpreadRectByRotate(P0, DegToRad(Angle));  
             return r;
         }

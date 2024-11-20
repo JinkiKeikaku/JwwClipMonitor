@@ -10,11 +10,12 @@ namespace JwwClipMonitor
     {
         public string FormatName;
         public int FormatId;
-
-        public ClipboardFormat(string formatName, int formatid)
+        public bool ToJww;
+        public ClipboardFormat(string formatName, int formatid, bool toJww)
         {
             FormatName = formatName;
             FormatId = formatid;
+            ToJww = toJww;
         }
 
         public override string ToString() => FormatName;

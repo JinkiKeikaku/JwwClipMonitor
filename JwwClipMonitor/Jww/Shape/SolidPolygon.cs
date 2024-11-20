@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static CadMath2D.CadPoint;
 using static CadMath2D.CadMath;
+using JwwClipMonitor.Properties;
 
 namespace JwwClipMonitor.Jww.Shape
 {
@@ -48,7 +49,7 @@ namespace JwwClipMonitor.Jww.Shape
             if(Points.Count == 2)
             {
                 d.Pen.Color = Color;
-                d.Pen.Width = LineStyle.DefaultLineWidth;
+                d.Pen.Width = Settings.Default.LineWidth;
                 d.Pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
                 g.DrawLine(d.Pen, pts[0], pts[1]);
             }

@@ -1,4 +1,5 @@
-﻿using JwwHelper;
+﻿using JwwClipMonitor.Properties;
+using JwwHelper;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,7 @@ namespace JwwClipMonitor.Jww.Shape
         public float Width;
         public float Space;
         public Color Color;
+        public bool IsHojo;
 
         public void Set(TextStyle src)
         {
@@ -22,6 +24,7 @@ namespace JwwClipMonitor.Jww.Shape
             Width = src.Width;
             Space = src.Space; ;
             Color = src.Color;
+            IsHojo = src.IsHojo;
         }
         public void Set(StyleConverter sc, JwwMoji s)
         {
@@ -30,11 +33,13 @@ namespace JwwClipMonitor.Jww.Shape
             Height = (float)s.m_dSizeY;
             Width = (float)s.m_dSizeX;
             Space = (float)s.m_dKankaku;
+            IsHojo=LineStyle.IsHojoDotText(s);
         }
 
         public void Draw(Graphics g, DrawContext d, string text)
         {
-            using var brush = new SolidBrush(Color);
+            if (Settings.Default.HiedHojo && IsHojo) return;
+            using var brush = new SolidBrush(LineStyle.ConvertDrawColor(Color));
             using var font = CreateFont();
             g.DrawString(text, font, brush, new PointF(0, -Height));
 

@@ -61,6 +61,15 @@ namespace JwwClipMonitor.Properties {
         }
         
         /// <summary>
+        ///   JwwClipManagerについて に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string MailSubject {
+            get {
+                return ResourceManager.GetString("MailSubject", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   型 System.Byte[] のローカライズされたリソースを検索します。
         /// </summary>
         internal static byte[] template {

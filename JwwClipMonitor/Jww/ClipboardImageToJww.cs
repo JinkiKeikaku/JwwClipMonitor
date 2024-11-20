@@ -1,4 +1,5 @@
 ﻿using JwwClipMonitor.Emf;
+using JwwClipMonitor.Properties;
 using JwwClipMonitor.Utility;
 using JwwHelper;
 using System;
@@ -41,13 +42,16 @@ namespace JwwClipMonitor.Jww
             var dt = DateTime.Now.ToString("yyyyMMdd_HHmmss_FFFFFFF") + ".bmp";
             var tfn = Path.Combine(folder, dt);
             // 32ビットビットマップだとjw_cadの背景色透過が働かないので24ビットに変換
-            using var image = new Bitmap(originalImage.Width, originalImage.Height, PixelFormat.Format24bppRgb);
-            using var g = Graphics.FromImage(image);
-            g.DrawImage(originalImage, 0, 0);
-            var width = image.Width * 24.4 / image.HorizontalResolution;
-            var height = image.Height * 25.4 / image.VerticalResolution;
+
+            using var image = To24bitBitmap(originalImage);
+            if (image == null) return;
+            //using var image = new Bitmap(originalImage.Width, originalImage.Height, PixelFormat.Format24bppRgb);
+            //using var g = Graphics.FromImage(image);
+            //g.DrawImage(originalImage, 0, 0);
+            var width = (float)(image.Width * 25.4 / image.HorizontalResolution);
+            var height = (float)(image.Height * 25.4 / image.VerticalResolution);
             image.Save(tfn, ImageFormat.Bmp);
-            var name = $"^@BM{tfn},{width},{height},0,0,1,0";
+            var name = $"^@BM{tfn},{width},{height}";
             var moji = new JwwMoji();
             moji.m_string = name;
             moji.m_dSizeX = 2;
@@ -58,6 +62,7 @@ namespace JwwClipMonitor.Jww
             moji.m_end_y = 0;
             moji.m_strFontName = "ＭＳ ゴシック";//決め打ち
             var cw = new JwwClipWriter();
+            cw.Header.m_Scales[0] = 1.0 / scale;
             cw.AddData(moji);
             IntPtr h = cw.Write();
             if (h == IntPtr.Zero) return;
@@ -84,7 +89,7 @@ namespace JwwClipMonitor.Jww
             ClipboardUtility.CloseClipboard();
         }
 
-        public static Image? GetBitmapImageFromClipboard(int formatId)
+        public static Bitmap? GetBitmapImageFromClipboard(int formatId)
         {
             if (formatId == PngId) return GetPngFromClipboard();
             if (formatId == ClipboardUtility.CF_BITMAP) return GetBitmapFromClipboard();
@@ -115,22 +120,22 @@ namespace JwwClipMonitor.Jww
             return null;
         }
 
-        private static Image? GetPngFromClipboard()
+        private static Bitmap? GetPngFromClipboard()
         {
             var d = Clipboard.GetData("PNG");
             if (d is not MemoryStream ms) return null;
-            using var image = Image.FromStream(ms);
+            using var image = Bitmap.FromStream(ms);
             ms.Dispose();
             return To24bitBitmap(image);
         }
 
-        private static Image? GetBitmapFromClipboard()
+        private static Bitmap? GetBitmapFromClipboard()
         {
             using var bmp = Clipboard.GetData(DataFormats.Bitmap) as Bitmap;
             return To24bitBitmap(bmp);
         }
 
-        private static Image? GetDibFromClipboard()
+        private static Bitmap? GetDibFromClipboard()
         {
             var d = Clipboard.GetData(DataFormats.Dib);
             var ds = d as MemoryStream;
@@ -166,7 +171,7 @@ namespace JwwClipMonitor.Jww
             // 24ビットに変換
             var image = new Bitmap(bmp.Width, bmp.Height, PixelFormat.Format24bppRgb);
             using var g = Graphics.FromImage(image);
-            g.Clear(Color.White);
+            g.Clear(Settings.Default.BgColor);
             g.DrawImage(bmp, 0, 0);
             return image;
         }

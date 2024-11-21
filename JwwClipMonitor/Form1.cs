@@ -1,17 +1,8 @@
-using JwwClipMonitor.Emf;
 using JwwClipMonitor.Jww;
 using JwwClipMonitor.Properties;
 using JwwClipMonitor.Utility;
-using JwwHelper;
 using System.ComponentModel;
-using System.Drawing;
 using System.Drawing.Imaging;
-using System.Net;
-using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using static System.Math;
 using static CadMath2D.CadMath;
 namespace JwwClipMonitor
 {
@@ -130,12 +121,12 @@ namespace JwwClipMonitor
             }
         }
 
-        private void timer1_Tick(object sender, EventArgs e)
-        {
-            //timer1.Stop();
-            //ChangeButtonState();
-            //timer1.Start();
-        }
+        //private void timer1_Tick(object sender, EventArgs e)
+        //{
+        //    //timer1.Stop();
+        //    //ChangeButtonState();
+        //    //timer1.Start();
+        //}
 
         private void btnSave_Click(object sender, EventArgs e)
         {
@@ -167,10 +158,7 @@ namespace JwwClipMonitor
         {
             using var d = new SettingsForm();
             TopMost = false;//こうしないと正常に表示できない。
-            if (d.ShowDialog(this) == DialogResult.OK)
-            {
-                UpdatePreview();
-            }
+            if (d.ShowDialog(this) == DialogResult.OK) UpdatePreview();
             TopMost = Settings.Default.IsTopMost;
         }
 
@@ -194,7 +182,6 @@ namespace JwwClipMonitor
             var bg = Settings.Default.IsPngTransparent ? Color.Transparent : Settings.Default.BgColor;
             var bmp = ClipboardJwwToImage.JwwToImage(bg, true);
             if (bmp == null) return;
-
             using var ms = new MemoryStream();
             bmp.Save(ms, ImageFormat.Png);
             ms.Flush();
@@ -361,6 +348,7 @@ namespace JwwClipMonitor
 
         private void UpdatePreview()
         {
+            //pictureBox1.ImageをDispose()するとメタファイルで落ちることがある
             //pictureBox1.Image?.Dispose();
             pictureBox1.Image = null;
             if (listFormat.Items.Count == 0) return;

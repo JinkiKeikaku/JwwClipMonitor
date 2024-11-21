@@ -31,7 +31,6 @@
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             pictureBox1 = new PictureBox();
-            timer1 = new System.Windows.Forms.Timer(components);
             toolTip1 = new ToolTip(components);
             label1 = new Label();
             listFormat = new ListBox();
@@ -58,12 +57,6 @@
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
             pictureBox1.TabIndex = 2;
             pictureBox1.TabStop = false;
-            // 
-            // timer1
-            // 
-            timer1.Enabled = true;
-            timer1.Interval = 500;
-            timer1.Tick += timer1_Tick;
             // 
             // label1
             // 
@@ -196,7 +189,6 @@
 
         #endregion
         private PictureBox pictureBox1;
-        private System.Windows.Forms.Timer timer1;
         private ToolTip toolTip1;
         private ListBox listFormat;
         private Button btnSave;

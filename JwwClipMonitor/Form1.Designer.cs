@@ -145,7 +145,7 @@
             radioImageToJww.Size = new Size(105, 19);
             radioImageToJww.TabIndex = 10;
             radioImageToJww.TabStop = true;
-            radioImageToJww.Tag = "0";
+            radioImageToJww.Tag = "ImageToJww";
             radioImageToJww.Text = "画像からJw_cad";
             radioImageToJww.UseVisualStyleBackColor = true;
             // 
@@ -157,7 +157,7 @@
             radioJwwToImage.Size = new Size(105, 19);
             radioJwwToImage.TabIndex = 10;
             radioJwwToImage.TabStop = true;
-            radioJwwToImage.Tag = "1";
+            radioJwwToImage.Tag = "JwwToImage";
             radioJwwToImage.Text = "Jw_cadから画像";
             radioJwwToImage.UseVisualStyleBackColor = true;
             // 

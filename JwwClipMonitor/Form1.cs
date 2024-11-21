@@ -17,6 +17,7 @@ namespace JwwClipMonitor
 {
     public partial class Form1 : Form
     {
+        enum ConvertMode { Unknown = -1, ImageToJww = 0, JwwToImage = 1 }
         internal static readonly PaperScale[] Scales = new PaperScale[] {
             new PaperScale("5:1", 5.0),
             new PaperScale("2:1", 2.0),
@@ -36,7 +37,7 @@ namespace JwwClipMonitor
         private List<ClipboardFormat> mFromJwwFormatList = new();
         private ClipboardViewer mClipboardViewer;
         private Point mMouseDragPosition = new();
-        private int mConvertMode = Settings.Default.ConvertMode;
+        private ConvertMode mConvertMode = General.IntToEnum(Settings.Default.ConvertMode, ConvertMode.ImageToJww);
         private ClipboardFormat? mLastToJwwFormat = null;
         private ClipboardFormat? mLastFromJwwFormat = null;
 
@@ -60,13 +61,31 @@ namespace JwwClipMonitor
             {
                 UpdateFormatList();
                 UpdatePreview();
+                ChangeButtonState();
             });
         }
         public BindingList<ClipboardFormat> FormatList { get; } = new();
         private void Form1_Load(object sender, EventArgs e)
         {
-            ChangeButtonState();
             TopMost = Settings.Default.IsTopMost;
+            InitMouseDrag();
+            InitModeRadioButton();
+            var i = Array.FindIndex(Scales, x => FloatEQ(x.Scale, Settings.Default.Scale));
+            if (i < 0) i = 0;
+            cmbScale.SelectedIndex = i;
+            cmbScale.SelectedIndexChanged += (object? sender, EventArgs e) =>
+            {
+                var i = cmbScale.SelectedIndex;
+                if (i >= 0 && i < Scales.Length) Settings.Default.Scale = Scales[i].Scale;
+            };
+            ChangeButtonState();
+        }
+
+        /// <summary>
+        /// プレビューエリアドラッグでウィンドウ移動のための初期化
+        /// </summary>
+        private void InitMouseDrag()
+        {
             pictureBox1.MouseDown += (sender, e) =>
             {
                 if ((e.Button & MouseButtons.Left) == MouseButtons.Left)
@@ -83,41 +102,39 @@ namespace JwwClipMonitor
                     this.Top += e.Y - mMouseDragPosition.Y;
                 }
             };
-            var radios = panelDirection.Controls.OfType<RadioButton>();
+        }
 
+        /// <summary>
+        /// モード切替ラジオボタンの初期化。
+        /// チェック変更時の切替処理もここ。
+        /// </summary>
+        private void InitModeRadioButton()
+        {
+            var radios = panelDirection.Controls.OfType<RadioButton>();
             foreach (var radio in radios)
             {
                 radio.CheckedChanged += (object? sender, EventArgs e) =>
                 {
-                    if (sender is RadioButton r)
+                    if (sender is not RadioButton r) return;
+                    if (!r.Checked) return;
+                    if (Enum.TryParse(typeof(ConvertMode), r.Tag.ToString(), false, out var tmp))
                     {
-                        if (r.Checked)
-                        {
-                            int.TryParse(r.Tag.ToString(), out mConvertMode);
-                            UpdateFormatList();
-                            UpdatePreview();
-                            ChangeButtonState();
-                            Settings.Default.ConvertMode = mConvertMode;
-                        }
+                        if (tmp is ConvertMode cm) mConvertMode = cm;
                     }
+                    UpdateFormatList();
+                    UpdatePreview();
+                    ChangeButtonState();
+                    Settings.Default.ConvertMode = (int)mConvertMode;
                 };
-                if (int.TryParse(radio.Tag.ToString(), out var x) && x == mConvertMode) radio.Checked = true;
+                if (radio.Tag.ToString() == mConvertMode.ToString()) radio.Checked = true;
             }
-            var i = Array.FindIndex(Scales, x => FloatEQ(x.Scale, Settings.Default.Scale));
-            if (i < 0) i = 0;
-            cmbScale.SelectedIndex = i;
-            cmbScale.SelectedIndexChanged += (object? sender, EventArgs e) =>
-            {
-                var i = cmbScale.SelectedIndex;
-                if (i >= 0 && i < Scales.Length) Settings.Default.Scale = Scales[i].Scale;
-            };
         }
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            timer1.Stop();
-            ChangeButtonState();
-            timer1.Start();
+            //timer1.Stop();
+            //ChangeButtonState();
+            //timer1.Start();
         }
 
         private void btnSave_Click(object sender, EventArgs e)
@@ -135,7 +152,7 @@ namespace JwwClipMonitor
             if (item == null) return;
             if (item.ToJww)
             {
-                var scale = Settings.Default.Scale;// Validate (cmbScale.SelectedItem as PaperScale)?.Scale ?? 1.0;
+                var scale = Settings.Default.Scale;
                 ClipboardImageToJww.ConvertToJww(this.Handle, item.FormatId, scale);
             }
             else
@@ -148,8 +165,8 @@ namespace JwwClipMonitor
 
         private void btnSettings_Click(object sender, EventArgs e)
         {
-            var d = new SettingsForm();
-            TopMost = false;
+            using var d = new SettingsForm();
+            TopMost = false;//こうしないと正常に表示できない。
             if (d.ShowDialog(this) == DialogResult.OK)
             {
                 UpdatePreview();
@@ -162,7 +179,7 @@ namespace JwwClipMonitor
             var item = listFormat.SelectedItem as ClipboardFormat;
             btnConvert.Enabled = item != null;
             btnSave.Enabled = item != null;
-            cmbScale.Enabled = mConvertMode == 0;// item?.ToJww == true;// && item?.FormatId == ClipboardUtility.CF_ENHMETAFILE;
+            cmbScale.Enabled = mConvertMode == 0;
         }
 
         private void CopyJwwAsBitmap()
@@ -192,6 +209,7 @@ namespace JwwClipMonitor
         {
             var mf = ClipboardJwwToImage.JwwToMetafile();
             if (mf == null) return;
+            //ハンドルはクリップボードで管理するので削除しない
             var h = mf.GetHenhmetafile();
             if (ClipboardUtility.OpenClipboard(Handle))
             {
@@ -203,7 +221,7 @@ namespace JwwClipMonitor
 
         private void Save(ClipboardFormat item)
         {
-            var d = new SaveFileDialog();
+            using var d = new SaveFileDialog();
             d.FileName = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             if (item.FormatId == ClipboardUtility.CF_BITMAP ||
                 item.FormatId == ClipboardUtility.CF_DIB ||
@@ -285,68 +303,55 @@ namespace JwwClipMonitor
                 }
                 return;
             }
-
         }
 
         private bool mListChanging = false;
-        private bool UpdateFormatList()
+        private void UpdateFormatList()
         {
             try
             {
                 mListChanging = true;
                 var list = new List<ClipboardFormat>();
-                if (mConvertMode == 1)
+                switch (mConvertMode)
                 {
-                    if (ClipboardUtility.IsClipboardFormatAvailable(ClipboardJwwToImage.JwwId))
-                    {
-                        list.AddRange(mFromJwwFormatList);
-                    }
+                    case ConvertMode.JwwToImage:
+                        if (ClipboardUtility.IsClipboardFormatAvailable(ClipboardJwwToImage.JwwId))
+                        {
+                            list.AddRange(mFromJwwFormatList);
+                        }
+                        break;
+                    case ConvertMode.ImageToJww:
+                        foreach (var s in mToJwwFormatList)
+                        {
+                            if (ClipboardUtility.IsClipboardFormatAvailable(s.FormatId)) list.Add(s);
+                        }
+                        break;
                 }
-                if (mConvertMode == 0)
-                {
-                    foreach (var s in mToJwwFormatList)
-                    {
-                        if (ClipboardUtility.IsClipboardFormatAvailable(s.FormatId)) list.Add(s);
-                    }
-                }
-                var changed = false;
                 for (var i = FormatList.Count - 1; i >= 0; i--)
                 {
-                    if (!list.Contains(FormatList[i]))
-                    {
-                        FormatList.RemoveAt(i);
-                        changed = true;
-                    }
+                    if (!list.Contains(FormatList[i])) FormatList.RemoveAt(i);
                 }
                 for (var i = 0; i < list.Count; i++)
                 {
-                    if (!FormatList.Contains(list[i]))
-                    {
-                        FormatList.Add(list[i]);
-                        changed = true;
-                    }
+                    if (!FormatList.Contains(list[i])) FormatList.Add(list[i]);
                 }
-
-                if (mConvertMode == 0)
+                switch (mConvertMode)
                 {
-                    if (mLastToJwwFormat != null)
-                    {
-                        var i = FormatList.IndexOf(mLastToJwwFormat);
-                        if (i >= 0) listFormat.SelectedIndex = i;
-                    }
-                }
-                else if (mConvertMode == 1)
-                {
-                    if (mLastFromJwwFormat != null)
-                    {
-                        var i = FormatList.IndexOf(mLastFromJwwFormat);
-                        if (i >= 0)
+                    case ConvertMode.ImageToJww:
+                        if (mLastToJwwFormat != null)
                         {
-                            listFormat.SelectedIndex = i;
+                            var i = FormatList.IndexOf(mLastToJwwFormat);
+                            if (i >= 0) listFormat.SelectedIndex = i;
                         }
-                    }
+                        break;
+                    case ConvertMode.JwwToImage:
+                        if (mLastFromJwwFormat != null)
+                        {
+                            var i = FormatList.IndexOf(mLastFromJwwFormat);
+                            if (i >= 0) listFormat.SelectedIndex = i;
+                        }
+                        break;
                 }
-                return changed;
             }
             finally
             {
@@ -356,7 +361,7 @@ namespace JwwClipMonitor
 
         private void UpdatePreview()
         {
-            pictureBox1.Image?.Dispose();
+            //pictureBox1.Image?.Dispose();
             pictureBox1.Image = null;
             if (listFormat.Items.Count == 0) return;
             var item = listFormat.SelectedItem as ClipboardFormat;
@@ -397,15 +402,18 @@ namespace JwwClipMonitor
         {
             if (!mListChanging)
             {
-                if (mConvertMode == 0)
+                var a = listFormat.SelectedItem as ClipboardFormat;
+                if (a != null)
                 {
-                    var a = listFormat.SelectedItem as ClipboardFormat;
-                    if (a != null) mLastToJwwFormat = a;
-                }
-                else if (mConvertMode == 1)
-                {
-                    var a = listFormat.SelectedItem as ClipboardFormat;
-                    if (a != null) mLastFromJwwFormat = a;
+                    switch (mConvertMode)
+                    {
+                        case ConvertMode.ImageToJww:
+                            mLastToJwwFormat = a;
+                            break;
+                        case ConvertMode.JwwToImage:
+                            mLastFromJwwFormat = a;
+                            break;
+                    }
                 }
             }
             UpdatePreview();

@@ -46,6 +46,13 @@ namespace JwwClipMonitor
                     }
                     return;
                 }
+                if (!Properties.Settings.Default.IsUpgrade)
+                {
+                    Properties.Settings.Default.Upgrade();
+                    Properties.Settings.Default.IsUpgrade = true;
+                    Properties.Settings.Default.Save();
+                }
+
                 SelectDll();
                 ApplicationConfiguration.Initialize();
                 Application.Run(new Form1());

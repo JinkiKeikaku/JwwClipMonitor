@@ -7,6 +7,8 @@ JwwClipMonitorは、Windowsのクリップボードにコピーされた画像�
 - クリップボードにあるJw_cadでコピーした図形を画像（Bitmap, PNG, EMF）として対応するアプリに張り付けることができます。
 - 保存ボタンで対応するクリップボードデータを保存することができます。
 
+![image](https://junkbulk.com/windows/JwwClipMonitor/images/JwwClipMonitor.png)
+
 ## 配布先
 インストーラ付きの公開版、<br/>
   https://junkbulk.com/windows/JwwClipMonitor/index.html<br/>

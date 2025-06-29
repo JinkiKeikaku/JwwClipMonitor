@@ -1650,7 +1650,7 @@ Draws the formatted text described by the specified IDWriteTextLayout object.</s
             <param name="pBrushForeground">The brush used to paint any text in textLayout that does not already have a brush associated with it as a drawing effect (specified by the IDWriteTextLayout::SetDrawingEffect method).</param>
             <param name="options">A value that indicates whether the text should be snapped to pixel boundaries and whether the text should be clipped to the layout rectangle. The default value is D2D1_DRAW_TEXT_OPTIONS_NONE, which indicates that text should be snapped to pixel boundaries and it should not be clipped to the layout rectangle.</param>
         </member>
-        <member name="M:CRenderTarget.DrawText(ATL.CStringT&lt;System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte,StrTraitMFC_DLL&lt;System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte,ATL.ChTraitsCRT&lt;System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte&gt;&gt;&gt;!System.Runtime.CompilerServices.IsConst*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,CD2DRectF!System.Runtime.CompilerServices.IsConst*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,CD2DBrush*,CD2DTextFormat*,D2D1_DRAW_TEXT_OPTIONS,DWRITE_MEASURING_MODE)">
+        <member name="M:CRenderTarget.DrawText(ATL.CStringT&lt;System.Char,StrTraitMFC_DLL&lt;System.Char,ATL.ChTraitsCRT{System.Char}&gt;&gt;!System.Runtime.CompilerServices.IsConst*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,CD2DRectF!System.Runtime.CompilerServices.IsConst*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,CD2DBrush*,CD2DTextFormat*,D2D1_DRAW_TEXT_OPTIONS,DWRITE_MEASURING_MODE)">
             <summary>
 Draws the specified text using the format information provided by an IDWriteTextFormat object.</summary>
             <param name="strText">A pointer to an array of Unicode characters to draw.</param>
@@ -2338,7 +2338,7 @@ If the method succeeds, it returns S_OK. Otherwise, it returns an HRESULT error 
 The destructor. Called when a D2D text layout object is being destroyed.
 </summary>
         </member>
-        <member name="M:CD2DTextLayout.#ctor(CRenderTarget*,ATL.CStringT&lt;System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte,StrTraitMFC_DLL&lt;System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte,ATL.ChTraitsCRT&lt;System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte&gt;&gt;&gt;!System.Runtime.CompilerServices.IsConst*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,CD2DTextFormat*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,CD2DSizeF!System.Runtime.CompilerServices.IsConst*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,System.Int32)">
+        <member name="M:CD2DTextLayout.#ctor(CRenderTarget*,ATL.CStringT&lt;System.Char,StrTraitMFC_DLL&lt;System.Char,ATL.ChTraitsCRT{System.Char}&gt;&gt;!System.Runtime.CompilerServices.IsConst*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,CD2DTextFormat*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,CD2DSizeF!System.Runtime.CompilerServices.IsConst*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,System.Int32)">
             <summary>
 Constructs a CD2DTextLayout object.</summary>
             <param name="pParentTarget">A pointer to the render target.</param>
@@ -2410,7 +2410,7 @@ If the method succeeds, it returns S_OK. Otherwise, it returns an HRESULT error 
 The destructor. Called when a D2D text format object is being destroyed.
 </summary>
         </member>
-        <member name="M:CD2DTextFormat.#ctor(CRenderTarget*,ATL.CStringT&lt;System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte,StrTraitMFC_DLL&lt;System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte,ATL.ChTraitsCRT&lt;System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte&gt;&gt;&gt;!System.Runtime.CompilerServices.IsConst*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,System.Single,DWRITE_FONT_WEIGHT,DWRITE_FONT_STYLE,DWRITE_FONT_STRETCH,ATL.CStringT&lt;System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte,StrTraitMFC_DLL&lt;System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte,ATL.ChTraitsCRT&lt;System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte&gt;&gt;&gt;!System.Runtime.CompilerServices.IsConst*!System.Runtime.CompilerServices">
+        <member name="M:CD2DTextFormat.#ctor(CRenderTarget*,ATL.CStringT&lt;System.Char,StrTraitMFC_DLL&lt;System.Char,ATL.ChTraitsCRT{System.Char}&gt;&gt;!System.Runtime.CompilerServices.IsConst*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,System.Single,DWRITE_FONT_WEIGHT,DWRITE_FONT_STYLE,DWRITE_FONT_STRETCH,ATL.CStringT&lt;System.Char,StrTraitMFC_DLL&lt;System.Char,ATL.ChTraitsCRT{System.Char}&gt;&gt;!System.Runtime.CompilerServices.IsConst*!System.Runtime.CompilerServices.IsImplicitlyDereferenced,IDWriteFontCollection*,System.Int32)">
             <summary>
 Constructs a CD2DTextFormat object.</summary>
             <param name="pParentTarget">A pointer to the render target.</param>
@@ -2774,7 +2774,7 @@ Attaches existing resource interface to the object</summary>
 The destructor. Called when a D2D bitmap brush object is being destroyed.
 </summary>
         </member>
-        <member name="M:CD2DBitmapBrush.#ctor(CRenderTarget*,System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte!System.Runtime.CompilerServices.IsConst*,CD2DSizeU,D2D1_BITMAP_BRUSH_PROPERTIES*,CD2DBrushProperties*,System.Int32)">
+        <member name="M:CD2DBitmapBrush.#ctor(CRenderTarget*,System.Char!System.Runtime.CompilerServices.IsConst*,CD2DSizeU,D2D1_BITMAP_BRUSH_PROPERTIES*,CD2DBrushProperties*,System.Int32)">
             <summary>
 Constructs a CD2DBitmapBrush object from file.</summary>
             <param name="pParentTarget">A pointer to the render target.</param>
@@ -2784,7 +2784,7 @@ Constructs a CD2DBitmapBrush object from file.</summary>
             <param name="pBrushProperties">A pointer to the opacity and transformation of a brush.</param>
             <param name="bAutoDestroy">Indicates that the object will be destroyed by owner (pParentTarget).</param>
         </member>
-        <member name="M:CD2DBitmapBrush.#ctor(CRenderTarget*,System.UInt32,System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte!System.Runtime.CompilerServices.IsConst*,CD2DSizeU,D2D1_BITMAP_BRUSH_PROPERTIES*,CD2DBrushProperties*,System.Int32)">
+        <member name="M:CD2DBitmapBrush.#ctor(CRenderTarget*,System.UInt32,System.Char!System.Runtime.CompilerServices.IsConst*,CD2DSizeU,D2D1_BITMAP_BRUSH_PROPERTIES*,CD2DBrushProperties*,System.Int32)">
             <summary>
 Constructs a CD2DBitmapBrush object from resource.</summary>
             <param name="pParentTarget">A pointer to the render target.</param>
@@ -3144,7 +3144,7 @@ Constructs a CD2DBitmap object from HBITMAP.</summary>
             <param name="sizeDest">Destination size of the bitmap.</param>
             <param name="bAutoDestroy">Indicates that the object will be destroyed by owner (pParentTarget).</param>
         </member>
-        <member name="M:CD2DBitmap.#ctor(CRenderTarget*,System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte!System.Runtime.CompilerServices.IsConst*,CD2DSizeU,System.Int32)">
+        <member name="M:CD2DBitmap.#ctor(CRenderTarget*,System.Char!System.Runtime.CompilerServices.IsConst*,CD2DSizeU,System.Int32)">
             <summary>
 Constructs a CD2DBitmap object from file.</summary>
             <param name="pParentTarget">A pointer to the render target.</param>
@@ -3152,7 +3152,7 @@ Constructs a CD2DBitmap object from file.</summary>
             <param name="sizeDest">Destination size of the bitmap.</param>
             <param name="bAutoDestroy">Indicates that the object will be destroyed by owner (pParentTarget).</param>
         </member>
-        <member name="M:CD2DBitmap.#ctor(CRenderTarget*,System.UInt32,System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte!System.Runtime.CompilerServices.IsConst*,CD2DSizeU,System.Int32)">
+        <member name="M:CD2DBitmap.#ctor(CRenderTarget*,System.UInt32,System.Char!System.Runtime.CompilerServices.IsConst*,CD2DSizeU,System.Int32)">
             <summary>
 Constructs a CD2DBitmap object from resource.</summary>
             <param name="pParentTarget">A pointer to the render target.</param>
